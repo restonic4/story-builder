@@ -182,15 +182,29 @@ local function runTestCase(test, suite)
             ok = false; err = res
         else
             -- wait for done or timeout
-            local t0 = tick()
-            while not done and (tick() - t0) < timeout do
-                task.wait(0.01)
+            local timedOut = false
+            if timeout < 0 then
+                -- wait indefinitely until done() is called
+                while not done do
+                    task.wait(0.01)
+                end
+            else
+                local t0 = tick()
+                while not done and (tick() - t0) < timeout do
+                    task.wait(0.01)
+                end
+                if not done then
+                    timedOut = true
+                end
             end
-            if not done then
-                ok = false; err = ("Async test timed out after %s seconds"):format(tostring(timeout))
+
+            if timedOut then
+                ok = false
+                err = ("Async test timed out after %s seconds"):format(tostring(timeout))
             else
                 if doneErr then ok = false; err = doneErr else ok = true end
             end
+
         end
     else
         ok, err = pcall(function() return test.fn() end)
@@ -284,9 +298,9 @@ function Test.reset()
     Test.clear()
 end
 
-function Test.runInnerTests()
-    for i, children in script:GetChildren() do
-        if children:IsA("ModuleScript") and children.Name ~= "Example" then
+function Test.RunTests(intance: Instance)
+    for i, children in intance:GetChildren() do
+        if children:IsA("ModuleScript") then
             local required = require(children)
             required.RegisterUnitTests()
         end
