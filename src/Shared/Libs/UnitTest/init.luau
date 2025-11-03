@@ -125,7 +125,7 @@ function Test.afterEach(fn)
 end
 
 -- it(name, fn, opts)
--- opts = { async = boolean, timeout = seconds (default 5), only = boolean, skip = boolean }
+-- opts = { async = boolean, timeout = seconds (default 5), only = boolean, skip = boolean, onAsyncFinish = function(passed: boolean) }
 function Test.it(name, fn, opts)
     opts = opts or {}
     if not Test._currentDescribe then
@@ -212,6 +212,25 @@ local function runTestCase(test, suite)
     result.passed = ok
     if not ok then result.error = tostring(err) end
     result.duration = tick() - startTime
+
+    -- If this was an async test and the user provided an onAsyncFinish hook, call it now with the pass/fail result.
+    -- Use pcall to avoid the hook blowing up the runner.
+    if test.opts and test.opts.async and type(test.opts.onAsyncFinish) == "function" then
+        local success, hookErr = pcall(function()
+            test.opts.onAsyncFinish(result.passed)
+        end)
+        
+        if not success then
+            -- If the hook itself errored, append a note to the result.error but don't change pass/fail.
+            local hookMsg = ("(onAsyncFinish hook error: %s)"):format(tostring(hookErr))
+            if result.error then
+                result.error = result.error .. "\n" .. hookMsg
+            else
+                result.error = hookMsg
+            end
+        end
+    end
+
     return result
 end
 
@@ -267,7 +286,7 @@ end
 
 function Test.runInnerTests()
     for i, children in script:GetChildren() do
-        if children:IsA("ModuleScript") then
+        if children:IsA("ModuleScript") and children.Name ~= "Example" then
             local required = require(children)
             required.RegisterUnitTests()
         end

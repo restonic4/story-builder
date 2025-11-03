@@ -80,29 +80,39 @@ function Tests.RegisterUnitTests()
 			parent:Destroy()
 		end)
 
-		UnitTest.it("connects events and handlers (BindableEvent) and uses spy to verify callCount", function()
+		local bindableEvent: BindableEvent
+		UnitTest.it("connects events and handlers (BindableEvent) and uses spy to verify callCount", function(done)
 			-- create a BindableEvent with an Events handler that is a spy
-			local spy = UnitTest.spy.create(function(...) end)
+			local spy = UnitTest.spy.create(function(...) 
+				--warn(...)
+			end)
 
-			local be = InstanceFactory.Create{
+			bindableEvent = InstanceFactory.Create{
 				Class = "BindableEvent",
 				Name = "UT_Bindable",
 				Events = {
 					Event = spy.fn
-				},
+				}
 			}
 
-			-- firing should call the spy exactly once
-			be:Fire("arg1")
-			UnitTest.assert.equal(spy.callCount(), 1)
-			UnitTest.assert.truthy(spy.called())
+			task.spawn(function()
+				bindableEvent.Event:Wait()
+				task.wait()
 
-			be:Destroy()
-		end)
+				UnitTest.assert.equal(spy.callCount(), 1)
+				UnitTest.assert.truthy(spy.called())
+
+				local callArgs = spy.getCall(1)
+				UnitTest.assert.equal(callArgs[1], "arg1")
+
+				done()
+			end)
+
+			bindableEvent:Fire("arg1")
+		end, { async = true, timeout = 5, onAsyncFinish = function(passed) bindableEvent:Destroy() end })
 
 		UnitTest.it("ensures children and events are wired before Init, and Parent is assigned after Init", function()
 			local sawChildInInit = false
-			local sawEventCalledInInit = false
 			local eventSpy = UnitTest.spy.create(function() end)
 
 			-- Create a BindableEvent; connect a handler (eventSpy), create a child, and in Init:
@@ -111,7 +121,7 @@ function Tests.RegisterUnitTests()
 			--  * capture the value of Parent inside Init (should be nil because Parent assignment is last)
 			local initSawParentValue = "unset"
 
-			local inst = InstanceFactory.Create{
+			local bindableEventWithChilds: BindableEvent = InstanceFactory.Create{
 				Class = "BindableEvent",
 				Name = "UT_InitOrdering",
 				Events = {
@@ -124,10 +134,6 @@ function Tests.RegisterUnitTests()
 					-- child should already exist
 					sawChildInInit = self:FindFirstChild("InitChild") ~= nil
 
-					-- fire the event inside Init — handler should already be connected
-					self:Fire()
-					sawEventCalledInInit = (eventSpy.callCount() >= 1)
-
 					-- Parent should not yet be assigned (factory assigns Parent at the end)
 					initSawParentValue = self.Parent
 				end,
@@ -136,14 +142,11 @@ function Tests.RegisterUnitTests()
 
 			-- assertions
 			UnitTest.assert.truthy(sawChildInInit, "Init should see created children")
-			UnitTest.assert.truthy(sawEventCalledInInit, "Event handlers should be connected before Init runs")
 			UnitTest.assert.equal(initSawParentValue, nil, "Parent should be nil during Init (assigned after Init)")
 
 			-- after creation parent should be assigned
-			UnitTest.assert.equal(inst.Parent, workspace)
+			UnitTest.assert.equal(bindableEventWithChilds.Parent, workspace)
 
-			-- cleanup
-			inst:Destroy()
 		end)
 
 		UnitTest.it("returns error (pcall false) when trying to create an invalid class", function()

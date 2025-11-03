@@ -61,9 +61,9 @@ function Tests.RegisterUnitTests()
 			UnitTest.assert.truthy(true)
 		end, { only = false })
 
-		UnitTest.it("is skipped", function()
+		--[[UnitTest.it("is skipped", function()
 			error("Should not run")
-		end, { skip = true })
+		end, { skip = true })]]
 	end)
 end
 
