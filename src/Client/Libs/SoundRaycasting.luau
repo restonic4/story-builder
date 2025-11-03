@@ -15,6 +15,14 @@ SoundRaytracing.Settings.MIN_VOLUME = 0
 SoundRaytracing.Settings.MAX_ATTENUATION = 1 - SoundRaytracing.Settings.MIN_VOLUME
 SoundRaytracing.Settings.DEBUG = false
 
+--[[
+
+TODO:
+- Use different samples depending on the user's quality and FPS
+- Unit tests
+
+]]
+
 function castSphereRays(origin: Vector3, rayCount: number, maxDistance: number, raycastParams: RaycastParams, dedupeRadius: number?)
 	rayCount = math.max(1, rayCount or 100)
 	maxDistance = maxDistance or 100
