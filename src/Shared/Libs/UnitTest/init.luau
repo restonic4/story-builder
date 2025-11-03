@@ -238,13 +238,13 @@ function Test.run(opts)
             table.insert(results, res)
             if res.skipped then
                 skipped = skipped + 1
-                print(string.format("  - SKIPPED: %s", res.fullName))
+                warn(string.format("  - SKIPPED: %s", res.fullName))
             elseif res.passed then
                 passed = passed + 1
                 print(string.format("  - PASS: %s (%.03fs)", res.fullName, res.duration))
             else
                 failed = failed + 1
-                print(string.format("  - FAIL: %s (%.03fs)\n      %s", res.fullName, res.duration, res.error))
+                warn(string.format("  - FAIL: %s (%.03fs)\n      %s", res.fullName, res.duration, res.error))
             end
             total = total + 1
         end
