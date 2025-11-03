@@ -106,24 +106,45 @@ function InstanceFactory.Export(instance, opts)
     -- default property whitelist (common/likely useful properties across GUI, BaseParts, Values, etc).
     -- You can pass opts.propsList to override.
     local defaultProps = {
-        "Archivable", "ZIndex", "LayoutOrder",
+        -- Instance
+        "Archivable",
+
+        -- Part
+        "Anchored", "CanCollide", "CanQuery", "CanTouch", "CastShadow", "CFrame", "Position",
+        "Size", "Orientation", "Velocity", "RotVelocity", "Mass", "Material", "BrickColor",
+        "Color", "MaterialVariant", "Reflectance", "Transparency", "Locked", "Origin",
+        "PivotOffset", "EnableFluidForces", "CollisionGroup", "CustomPhysicalProperties",
+        "Massless", "RootPriority", "Shape", "AssemblyLinearVelocity", "AssemblyAngularVelocity",
+        "BackSurface", "BottomSurface", "FrontSurface", "LeftSurface", "RightSurface", "TopSurface",
+
+        -- ScreenGui
+        "ClipToDeviceSafeArea", "SafeAreaCompatibility", "ScreenInsets", "DisplayOrder",
+        "Enabled", "IgnoreGuiInset", "ResetOnSpawn", "ZIndexBehaviour", "ZIndex", "LayoutOrder",
+        "AutoLocalize", "RootLocalizationTable", "SelectionGroup",
+
+        -- Frame
+        "SelectionImageObject", "Active", "AnchorPoint", "AutomaticSize", "BackgroundColor3",
+        "BackgroundTransparency", "BorderColor3", "BorderMode", "BorderSizePixel", "Interactable",
+        "Rotation", "SizeConstraint", "Style", "Visible", "ClipDescendants", "NextSelectionDown",
+        "NextSelectionLeft", "NextSelectionRight", "NextSelectionUp", "Selectable", "SelectionOrder",
+
+        -- ImageLabel
+        "Image", "ImageContent", "ImageRectSize", "ImageRectOffset", "ImageTransparency", "ImageColor3",
+        "ScaleType", "SliceCenter", "ResampleMode",
+
+        -- Text
+
+        -- ValueObjects
+        "Value", "MaxValue", "MinValue",
+
         -- GUI/Text
-        "Position", "Size", "AnchorPoint", "BackgroundColor3", "BackgroundTransparency",
-        "BorderSizePixel", "BorderColor3", "BorderMode", "ClipsDescendants", "LayoutOrder",
-        "Visible",
+        "ClipsDescendants",
+
         -- Text
         "Text", "TextColor3", "TextSize", "TextScaled", "Font", "TextStrokeTransparency", "TextStrokeColor3",
         "TextWrapped", "TextXAlignment", "TextYAlignment", "TextTransparency",
-        -- Image
-        "Image", "ImageRectSize", "ImageRectOffset", "ImageColor3", "ScaleType", "SliceCenter",
-        -- BasePart
-        "Anchored", "CanCollide", "CanQuery", "CanTouch", "CastShadow", "CFrame", "Position",
-        "Size", "Orientation", "Velocity", "RotVelocity", "Mass",
-        -- ValueObjects
-        "Value", "MaxValue", "MinValue",
         -- Other
-        "Transparency", "Material", "Color", "Reflectance", "Points", "MaxForce",
-        "Weight", "Enabled", "Priority"
+        "Points", "MaxForce", "Weight", "Enabled", "Priority"
     }
 
     local propsList = opts.propsList or defaultProps
