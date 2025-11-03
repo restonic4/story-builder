@@ -147,6 +147,7 @@ function Tests.RegisterUnitTests()
 			-- after creation parent should be assigned
 			UnitTest.assert.equal(bindableEventWithChilds.Parent, workspace)
 
+			bindableEventWithChilds:Destroy()
 		end)
 
 		UnitTest.it("returns error (pcall false) when trying to create an invalid class", function()
@@ -159,6 +160,34 @@ function Tests.RegisterUnitTests()
 			UnitTest.assert.equal(ok, false)
 		end)
 
+		UnitTest.it("creates a basic instance and exports it", function()
+			local inst = InstanceFactory.Create({
+				Class = "Folder",
+				Name = "UT_TestFolder_Simple",
+				Parent = workspace,
+				Properties = {
+					Archivable = false
+				},
+				Children = {
+					{
+						Class = "Part",
+						Name = "HelloWorld",
+						Properties = {
+							Anchored = true,
+							CanCollide = false,
+							CanQuery = false,
+							CanTouch = false,
+							Transparency = 0.5
+						}
+					}
+				}
+			})
+
+			warn(InstanceFactory.Export(inst))
+
+			-- cleanup
+			--inst:Destroy()
+		end)
 	end)
 end
 

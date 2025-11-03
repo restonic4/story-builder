@@ -1,5 +1,8 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local InstanceFactory = require(ReplicatedStorage.Shared.Libs.InstanceFactory)
 local Gizmos = require(script.Parent.Gizmos)
 
 local SoundRaytracing = {}
@@ -8,6 +11,7 @@ SoundRaytracing.Settings = {}
 local RED = Color3.new(1, 0, 0)
 local GREEN = Color3.new(0, 1, 0)
 local BLUE = Color3.new(0, 0, 1)
+local WHITE = Color3.new(1, 1, 1)
 
 SoundRaytracing.Settings.SAMPLES = 256
 SoundRaytracing.Settings.RAYBACK_OFFSET = 0.1
@@ -22,6 +26,37 @@ TODO:
 - Unit tests
 
 ]]
+
+SoundRaytracing.DebugGui = nil
+
+function updateDebugUI()
+	if SoundRaytracing.Settings.DEBUG then
+		if not SoundRaytracing.DebugGui then
+			SoundRaytracing.DebugGui = InstanceFactory.Create({
+				Class = "ScreenGui",
+				Name = "SoundRaytracingDebugGui",
+				Properties = {
+					Enabled = false,
+					ResetOnSpawn = false,
+					IgnoreGuiInset = true
+				},
+				Parent = Players.LocalPlayer.PlayerGui,
+				Children = {
+					{
+						Class = "Frame",
+						Properties = {
+							Size = UDim2.new(1, 0, 1, 0)
+						},
+					}
+				}
+			})
+		end
+
+		SoundRaytracing.DebugGui.Enabled = true
+	elseif SoundRaytracing.DebugGui then
+		SoundRaytracing.DebugGui.Enabled = false
+	end
+end
 
 function castSphereRays(origin: Vector3, rayCount: number, maxDistance: number, raycastParams: RaycastParams, dedupeRadius: number?)
 	rayCount = math.max(1, rayCount or 100)
@@ -84,6 +119,11 @@ function castSphereRays(origin: Vector3, rayCount: number, maxDistance: number, 
 					Distance = (pos - origin).Magnitude,
 					Direction = direction,
 				})
+			end
+		else
+			if SoundRaytracing.Settings.DEBUG then
+				Gizmos:SetColor(WHITE)
+				Gizmos:DrawLine(origin, origin + direction * maxDistance)
 			end
 		end
 	end
@@ -152,6 +192,8 @@ local function registerEmitterLoop(player: Player, camera: BasePart | Camera, em
 			SoundRaytracing.UnRegister(emitter)
             return
 		end
+
+		updateDebugUI()
 
 		local rp = RaycastParams.new()
 		rp.FilterDescendantsInstances = { emitter, player.Character, camera }

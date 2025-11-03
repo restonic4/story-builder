@@ -91,7 +91,156 @@ function InstanceFactory.Create(spec)
     return InstanceFactory.new(className, spec)
 end
 
+-- Export an Instance into the same "spec" table format accepted by InstanceFactory.Create/new.
+-- Usage: local spec = InstanceFactory.Export(instance, opts)
+-- opts (optional):
+--   propsList = array of property names to attempt to read (default: a sensible whitelist)
+--   includeParent = boolean (default false) -- whether to include Parent in the exported spec (careful with cycles)
+--   includeAttributes = boolean (default true)
+--   includeChildren = boolean (default true)
+--   includeProperties = boolean (default true)
+function InstanceFactory.Export(instance, opts)
+    assert(typeof(instance) == "Instance" or type(instance) == "userdata", "Export expects a Roblox Instance")
+    opts = opts or {}
+
+    -- default property whitelist (common/likely useful properties across GUI, BaseParts, Values, etc).
+    -- You can pass opts.propsList to override.
+    local defaultProps = {
+        "Archivable", "ZIndex", "LayoutOrder",
+        -- GUI/Text
+        "Position", "Size", "AnchorPoint", "BackgroundColor3", "BackgroundTransparency",
+        "BorderSizePixel", "BorderColor3", "BorderMode", "ClipsDescendants", "LayoutOrder",
+        "Visible",
+        -- Text
+        "Text", "TextColor3", "TextSize", "TextScaled", "Font", "TextStrokeTransparency", "TextStrokeColor3",
+        "TextWrapped", "TextXAlignment", "TextYAlignment", "TextTransparency",
+        -- Image
+        "Image", "ImageRectSize", "ImageRectOffset", "ImageColor3", "ScaleType", "SliceCenter",
+        -- BasePart
+        "Anchored", "CanCollide", "CanQuery", "CanTouch", "CastShadow", "CFrame", "Position",
+        "Size", "Orientation", "Velocity", "RotVelocity", "Mass",
+        -- ValueObjects
+        "Value", "MaxValue", "MinValue",
+        -- Other
+        "Transparency", "Material", "Color", "Reflectance", "Points", "MaxForce",
+        "Weight", "Enabled", "Priority"
+    }
+
+    local propsList = opts.propsList or defaultProps
+    local includeAttributes = opts.includeAttributes == nil and true or opts.includeAttributes
+    local includeChildren = opts.includeChildren == nil and true or opts.includeChildren
+    local includeProperties = opts.includeProperties == nil and true or opts.includeProperties
+    local includeParent = opts.includeParent or true
+
+    -- helper: determine if a value is safe/serializable into the spec (we skip Instances and functions and signals).
+    local function isSerializable(v)
+        local t = typeof(v)
+        if t == "Instance" or t == "RBXScriptSignal" or t == "function" then
+            return false
+        end
+        -- allow numbers, strings, booleans, Vector2/3, UDim2, Color3, CFrame, EnumItem, NumberRange, ColorSequence, NumberSequence, Rect, etc.
+        -- We'll accept anything that's not an Instance / Signal / Function; pcall guard will still be used when reading.
+        return true
+    end
+
+    -- helper: safe read a property, returning (ok, value)
+    local function safeReadProperty(obj, propName)
+        local ok, val = pcall(function() return obj[propName] end)
+        if not ok then
+            return false, nil
+        end
+        return true, val
+    end
+
+    local spec = {}
+
+    -- set class (both shorthand index and explicit Class so Create() will accept it either way)
+    spec[1] = instance.ClassName
+    spec.Class = instance.ClassName
+
+    -- top-level common properties (Name is extremely common)
+    local okName, nameVal = safeReadProperty(instance, "Name")
+    if okName and type(nameVal) == "string" and nameVal ~= "" then
+        spec.Name = nameVal
+    end
+
+    -- optionally include Parent as a reference (careful: may create cycles). Default: false.
+    if includeParent then
+        local okParent, parentVal = safeReadProperty(instance, "Parent")
+        if okParent and parentVal ~= nil and typeof(parentVal) == "Instance" then
+            -- we don't attempt to embed the full parent tree; just include its full name for human reference
+            spec.Parent = parentVal:GetFullName() and parentVal:GetFullName() or parentVal.Name
+        end
+    end
+
+    -- Properties: attempt to read values from propsList and include only serializable ones
+    if includeProperties then
+        spec.Properties = spec.Properties or {}
+        for _, propName in ipairs(propsList) do
+            -- skip keys that are reserved in our spec format
+            if propName ~= "Parent" and propName ~= "Children" and propName ~= "Attributes"
+            and propName ~= "Events" and propName ~= "Init" and propName ~= "Properties" then
+                local ok, val = safeReadProperty(instance, propName)
+                if ok and val ~= nil and isSerializable(val) then
+                    -- for EnumItem, convert to Enum name (keeps readable/robust)
+                    if typeof(val) == "EnumItem" then
+                        spec.Properties[propName] = tostring(val) -- e.g. "Enum.Font.SourceSans"
+                    else
+                        spec.Properties[propName] = val
+                    end
+                end
+            end
+        end
+    end
+
+    -- Attributes
+    if includeAttributes then
+        local okAttr, attrs = pcall(function() return instance:GetAttributes() end)
+        if okAttr and type(attrs) == "table" then
+            -- copy attributes as-is (they are primitives or simple tables)
+            if next(attrs) then
+                spec.Attributes = {}
+                for k, v in pairs(attrs) do
+                    -- only include serializable attribute values
+                    if isSerializable(v) then
+                        spec.Attributes[k] = v
+                    end
+                end
+            end
+        end
+    end
+
+    -- Children
+    if includeChildren then
+        local okChildren, children = pcall(function() return instance:GetChildren() end)
+        if okChildren and type(children) == "table" and #children > 0 then
+            spec.Children = {}
+            for _, child in ipairs(children) do
+                -- recursively export; avoid including Parent in child spec to prevent cycles
+                local success, childSpec = pcall(function()
+                    return InstanceFactory.Export(child, {
+                        propsList = opts.propsList,
+                        includeAttributes = includeAttributes,
+                        includeChildren = includeChildren,
+                        includeProperties = includeProperties,
+                        includeParent = false
+                    })
+                end)
+                if success and type(childSpec) == "table" then
+                    table.insert(spec.Children, childSpec)
+                else
+                    -- fallback: if export failed, insert a minimal entry
+                    table.insert(spec.Children, { child.ClassName, Name = child.Name })
+                end
+            end
+        end
+    end
+
+    return spec
+end
+
 -- alias
 InstanceFactory.New = InstanceFactory.new
+InstanceFactory.Export = InstanceFactory.Export
 
 return InstanceFactory
