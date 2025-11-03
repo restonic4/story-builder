@@ -265,5 +265,16 @@ function Test.reset()
     Test.clear()
 end
 
+function Test.runInnerTests()
+    for i, children in script:GetChildren() do
+        if children:IsA("ModuleScript") then
+            local required = require(children)
+            required.RegisterUnitTests()
+        end
+    end
+
+    Test.run()
+end
+
 -- Return module
 return Test
