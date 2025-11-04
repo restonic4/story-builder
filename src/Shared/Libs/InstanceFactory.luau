@@ -132,19 +132,13 @@ function InstanceFactory.Export(instance, opts)
         "Image", "ImageContent", "ImageRectSize", "ImageRectOffset", "ImageTransparency", "ImageColor3",
         "ScaleType", "SliceCenter", "ResampleMode",
 
-        -- Text
-
         -- ValueObjects
         "Value", "MaxValue", "MinValue",
 
-        -- GUI/Text
-        "ClipsDescendants",
-
-        -- Text
-        "Text", "TextColor3", "TextSize", "TextScaled", "Font", "TextStrokeTransparency", "TextStrokeColor3",
-        "TextWrapped", "TextXAlignment", "TextYAlignment", "TextTransparency",
         -- Other
-        "Points", "MaxForce", "Weight", "Enabled", "Priority"
+        "ClipsDescendants", "Text", "TextColor3", "TextSize", "TextScaled", "Font", "TextStrokeTransparency",
+        "TextStrokeColor3", "TextWrapped", "TextXAlignment", "TextYAlignment", "TextTransparency", "Points",
+        "MaxForce", "Weight", "Enabled", "Priority", ""
     }
 
     local propsList = opts.propsList or defaultProps
@@ -190,7 +184,8 @@ function InstanceFactory.Export(instance, opts)
         local okParent, parentVal = safeReadProperty(instance, "Parent")
         if okParent and parentVal ~= nil and typeof(parentVal) == "Instance" then
             -- we don't attempt to embed the full parent tree; just include its full name for human reference
-            spec.Parent = parentVal:GetFullName() and parentVal:GetFullName() or parentVal.Name
+            spec.Parent = parentVal
+            spec.ParentPath = parentVal:GetFullName() and parentVal:GetFullName() or parentVal.Name
         end
     end
 

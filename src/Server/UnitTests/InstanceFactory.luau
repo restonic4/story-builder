@@ -161,7 +161,7 @@ function Tests.RegisterUnitTests()
 		end)
 
 		UnitTest.it("creates a basic instance and exports it", function()
-			local inst = InstanceFactory.Create({
+			local instanceData = {
 				Class = "Folder",
 				Name = "UT_TestFolder_Simple",
 				Parent = workspace,
@@ -181,12 +181,19 @@ function Tests.RegisterUnitTests()
 						}
 					}
 				}
-			})
+			}
 
-			warn(InstanceFactory.Export(inst))
+			local inst = InstanceFactory.Create(instanceData)
+			local exportedData = InstanceFactory.Export(inst)
+
+			UnitTest.assert.equal(exportedData.Class, instanceData.Class)
+			UnitTest.assert.equal(exportedData.Name, instanceData.Name)
+			UnitTest.assert.equal(exportedData.ParentPath, instanceData.Parent:GetFullName())
+			UnitTest.assert.equal(exportedData.Properties.Archivable, instanceData.Properties.Archivable)
+			UnitTest.assert.equal(#exportedData.Children, #instanceData.Children)
 
 			-- cleanup
-			--inst:Destroy()
+			inst:Destroy()
 		end)
 	end)
 end

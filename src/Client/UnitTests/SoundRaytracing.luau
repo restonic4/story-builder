@@ -1,5 +1,5 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local StarterPlayer = game:GetService("StarterPlayer")
 local InstanceFactory = require(ReplicatedStorage.Shared.Libs.InstanceFactory)
 local SoundRaytracing = require(StarterPlayer.StarterPlayerScripts.Client.Libs.SoundRaytracing)
@@ -12,6 +12,7 @@ function Tests.RegisterUnitTests()
 
 		UnitTest.it("setup the basic sound raytracing settings", function()
             SoundRaytracing.SetDebug(true)
+            SoundRaytracing.SetSkyComputes(true)
             SoundRaytracing.SetSamples(256)
 
 			UnitTest.assert.equal(SoundRaytracing.Settings.DEBUG, true)
@@ -23,12 +24,18 @@ function Tests.RegisterUnitTests()
             UnitTest.assert.equal(SoundRaytracing.Settings.SAMPLES, 256)
 		end)
 
-        local emitter: BasePart
+        local testInstances: Folder
         UnitTest.it("create and register emitter", function(done)
-			emitter = InstanceFactory.Create({
+            testInstances = InstanceFactory.Create({
+                Class = "Folder",
+                Name = "SoundRaytracingTest",
+                Parent = workspace
+            })
+
+			local emitter = InstanceFactory.Create({
                 Class = "Part",
                 Name = "Emitter",
-                Parent = workspace,
+                Parent = testInstances,
                 Properties = {
 					Archivable = false,
                     Anchored = true,
@@ -38,16 +45,34 @@ function Tests.RegisterUnitTests()
 					{
                         Class = "Sound",
                         Properties = {
-                            Archivable = false
+                            Archivable = false,
+                            SoundId = "rbxassetid://1837810583",
+                            Looped = true,
+                            RollOffMaxDistance = 100
                         }
                     }
 				}
             })
 
+            emitter.Sound:Play()
+
+            local listener: BasePart = InstanceFactory.Create({
+                Class = "Part",
+                Name = "Listener",
+                Parent = testInstances,
+                Properties = {
+					Archivable = false,
+                    Anchored = true,
+                    Position = Vector3.new(-37.5, 5, 0)
+				}
+            })
+
+            SoundRaytracing.SetListenerObject(listener)
+
             local walls = InstanceFactory.Create({
                 Class = "Folder",
                 Name = "Walls",
-                Parent = workspace,
+                Parent = testInstances,
                 Properties = {
 					Archivable = false
 				},
@@ -71,18 +96,68 @@ function Tests.RegisterUnitTests()
                             Position = Vector3.new(-25, 5, 0),
                             Size = Vector3.new(1, 10, 50)
                         }
+                    },
+                    {
+                        Class = "Part",
+                        Name = "Wall",
+                        Properties = {
+                            Archivable = false,
+                            Anchored = true,
+                            Position = Vector3.new(-50, 5, 0),
+                            Size = Vector3.new(1, 10, 50)
+                        }
+                    },
+                    {
+                        Class = "Part",
+                        Name = "Wall",
+                        Properties = {
+                            Archivable = false,
+                            Anchored = true,
+                            Position = Vector3.new(-37.5, 5, -25),
+                            Size = Vector3.new(25, 10, 1)
+                        }
+                    },
+                    {
+                        Class = "Part",
+                        Name = "Roof",
+                        Properties = {
+                            Archivable = false,
+                            Anchored = true,
+                            Position = Vector3.new(-37.5, 10, 0),
+                            Size = Vector3.new(25, 1, 50)
+                        }
                     }
 				}
             })
 
             SoundRaytracing.RegisterEmitter(emitter)
 
-            local player = Players.LocalPlayer
-            local character: Model = player.Character or player.CharacterAdded:Wait()
+            task.spawn(function()
+                RunService.RenderStepped:Wait()
+                RunService.RenderStepped:Wait()
 
-            character:PivotTo(emitter.CFrame * CFrame.new(0, -5, 0))
+                UnitTest.assert.near(emitter.Sound.Volume, 0.07, 0.01)
 
-		end, { async = true, timeout = -1, onAsyncFinish = function(passed) emitter:Destroy() end })
+                RunService.RenderStepped:Wait()
+                RunService.RenderStepped:Wait()
+
+                listener.Position = Vector3.new(0, 30, 0)
+                
+                RunService.RenderStepped:Wait()
+                RunService.RenderStepped:Wait()
+
+                UnitTest.assert.near(emitter.Sound.Volume, 0.5, 0.01)
+
+                RunService.RenderStepped:Wait()
+                RunService.RenderStepped:Wait()
+                
+                done()
+            end)
+
+		end, { async = true, timeout = -1, onAsyncFinish = function(passed)
+            testInstances:Destroy()
+            SoundRaytracing.ResetSettings()
+        end })
 		
 	end)
 end
